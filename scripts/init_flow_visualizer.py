@@ -186,7 +186,10 @@ def main() -> int:
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     print(f"Visualizer ready: {output_dir}")
-    print(f"Open by serving that folder, for example: python3 -m http.server 5188")
+    print("Start preview from that folder, for example: python3 -m http.server 5188")
+    print("==============================")
+    print("🌐 打开节点图： http://127.0.0.1:5188/")
+    print("==============================")
     return 0
 
 

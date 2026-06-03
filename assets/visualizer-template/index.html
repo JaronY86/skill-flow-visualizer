@@ -27,6 +27,9 @@
       --decision: #ff9b62;
       --figma: #ff6b9d;
       --output: #9bd66f;
+      --selection: #2f6fed;
+      --selection-soft: rgba(47, 111, 237, 0.12);
+      --selection-line: rgba(47, 111, 237, 0.7);
       --floating-control-width: 168px;
     }
 
@@ -279,8 +282,176 @@
       color: var(--text);
     }
 
+    .selection-toolbar {
+      display: flex;
+      min-height: 32px;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 6px 8px 6px 10px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .selection-count {
+      min-width: 58px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .selection-action,
+    .selection-clear,
+    .export-button,
+    .export-close {
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      background: #ffffff;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+      transition: border-color 140ms ease, background 140ms ease, color 140ms ease, opacity 140ms ease;
+    }
+
+    .selection-action {
+      min-width: 78px;
+      height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .selection-action:disabled {
+      cursor: default;
+      opacity: 0.45;
+    }
+
+    .selection-action:not(:disabled):hover,
+    .selection-clear:hover,
+    .export-button:hover,
+    .export-close:hover {
+      border-color: var(--selection);
+      background: var(--selection-soft);
+    }
+
+    .selection-clear,
+    .export-close {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 15px;
+      line-height: 20px;
+    }
+
+    .selection-marquee {
+      position: absolute;
+      z-index: 1;
+      display: none;
+      border: 1px solid var(--selection-line);
+      background: var(--selection-soft);
+      pointer-events: none;
+    }
+
+    .selection-marquee.active {
+      display: block;
+    }
+
+    .export-panel {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(17, 17, 17, 0.16);
+      backdrop-filter: blur(2px);
+      pointer-events: auto;
+    }
+
+    .export-panel[hidden] {
+      display: none;
+    }
+
+    .export-card {
+      display: grid;
+      width: min(720px, 100%);
+      max-height: min(720px, calc(100vh - 56px));
+      grid-template-rows: auto minmax(220px, 1fr) auto auto;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+    }
+
+    .export-header,
+    .export-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .export-title {
+      margin: 0;
+      overflow: hidden;
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.25;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .export-output {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: 0;
+      background: #fbfbfb;
+      color: var(--text);
+      font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .export-action-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .export-button {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .export-status {
+      min-height: 16px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
     .canvas-wrap.dragging {
       cursor: default;
+    }
+
+    .canvas-wrap.selecting {
+      cursor: crosshair;
     }
 
     svg {
@@ -372,6 +543,10 @@
       stroke-width: 1.5;
     }
 
+    .node {
+      cursor: pointer;
+    }
+
     .flow-label {
       fill: var(--text);
       font-size: 15px;
@@ -397,6 +572,12 @@
     .node.pending rect {
       stroke: var(--pending);
       opacity: 0.88;
+    }
+
+    .node.selected rect {
+      stroke: var(--selection);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 10px 22px rgba(47, 111, 237, 0.18));
     }
 
     .node-title {
@@ -464,10 +645,10 @@
         border-top: 1px solid var(--border);
         display: grid;
         grid-template-columns: minmax(0, 1fr) 188px;
-        grid-template-rows: auto auto;
+        grid-template-rows: auto auto auto;
         align-items: start;
         gap: 6px 10px;
-        max-height: 132px;
+        max-height: 176px;
         padding: 8px 12px 10px;
         overflow: hidden;
       }
@@ -518,6 +699,13 @@
         margin: 0;
       }
 
+      .selection-toolbar {
+        grid-column: 1 / 3;
+        grid-row: 3;
+        margin-top: 2px;
+        max-width: 100%;
+      }
+
       .stat {
         min-width: 0;
         padding: 7px 6px;
@@ -562,6 +750,23 @@
           </button>
         </div>
         <svg id="graph" role="img" aria-label="Skill flow graph"></svg>
+        <div class="selection-marquee" id="selection-marquee"></div>
+        <div class="export-panel" id="export-panel" hidden>
+          <div class="export-card" role="dialog" aria-modal="true" aria-labelledby="export-title">
+            <div class="export-header">
+              <h2 class="export-title" id="export-title">Selected node MD</h2>
+              <button class="export-close" id="export-close" type="button" aria-label="Close export panel" title="Close">×</button>
+            </div>
+            <textarea class="export-output" id="export-output" readonly></textarea>
+            <div class="export-actions">
+              <p class="export-status" id="export-status"></p>
+              <div class="export-action-group">
+                <button class="export-button" id="export-copy" type="button">Copy</button>
+                <button class="export-button" id="export-download" type="button">Download</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <aside>
         <p class="section-title" id="node-colors-title">Node Colors</p>
@@ -571,6 +776,11 @@
           <div class="stat"><strong id="done-count">0</strong><span id="done-label">done</span></div>
           <div class="stat"><strong id="active-count">0</strong><span id="active-label">active</span></div>
           <div class="stat"><strong id="pending-count">0</strong><span id="pending-label">pending</span></div>
+        </div>
+        <div class="selection-toolbar" id="selection-toolbar">
+          <span class="selection-count" id="selection-count">0 selected</span>
+          <button class="selection-action" id="selection-export" type="button" disabled>Export MD</button>
+          <button class="selection-clear" id="selection-clear" type="button" aria-label="Clear selection" title="Clear selection">×</button>
         </div>
       </aside>
     </main>
@@ -586,6 +796,18 @@
     const nodeModeButton = document.getElementById("node-mode-button");
     const nodeModeNormal = document.getElementById("node-mode-normal");
     const nodeModeSimple = document.getElementById("node-mode-simple");
+    const selectionToolbar = document.getElementById("selection-toolbar");
+    const selectionCount = document.getElementById("selection-count");
+    const selectionExport = document.getElementById("selection-export");
+    const selectionClear = document.getElementById("selection-clear");
+    const selectionMarquee = document.getElementById("selection-marquee");
+    const exportPanel = document.getElementById("export-panel");
+    const exportTitle = document.getElementById("export-title");
+    const exportOutput = document.getElementById("export-output");
+    const exportStatus = document.getElementById("export-status");
+    const exportClose = document.getElementById("export-close");
+    const exportCopy = document.getElementById("export-copy");
+    const exportDownload = document.getElementById("export-download");
     const typeColors = {
       input: "var(--input)",
       process: "var(--process)",
@@ -606,6 +828,20 @@
         status: "Status",
         syncPrefix: "Synced",
         syncError: "Sync error",
+        selection: {
+          count: "{count} selected",
+          export: "Export MD",
+          clear: "Clear selection",
+          modalTitle: "Selected node MD",
+          copy: "Copy",
+          download: "Download",
+          empty: "Select one or more nodes first.",
+          copied: "Copied Markdown. Paste it into the Agent chat when you want it refined.",
+          copyFailed: "Markdown is ready. Copy it manually from the text box.",
+          downloaded: "Downloaded Markdown.",
+          bridgeSaved: "Saved through the local bridge and copied Markdown.",
+          bridgeUnavailable: "Local bridge is unavailable, so Markdown was prepared in the browser."
+        },
         statusLabels: {
           done: "done",
           active: "active",
@@ -632,6 +868,20 @@
         status: "状态",
         syncPrefix: "已同步",
         syncError: "同步错误",
+        selection: {
+          count: "已选 {count} 个",
+          export: "导出 MD",
+          clear: "清空选择",
+          modalTitle: "选中节点 MD",
+          copy: "复制",
+          download: "下载",
+          empty: "请先选择一个或多个节点。",
+          copied: "已复制 Markdown，需要时可直接粘给 Agent 继续整理。",
+          copyFailed: "Markdown 已生成，可在文本框内手动复制。",
+          downloaded: "已下载 Markdown。",
+          bridgeSaved: "已通过本地桥接保存，并复制了 Markdown。",
+          bridgeUnavailable: "当前不是桥接服务，已在浏览器内生成 Markdown。"
+        },
         statusLabels: {
           done: "完成",
           active: "进行中",
@@ -762,6 +1012,13 @@
     let lastSyncTime = null;
     let currentLang = localStorage.getItem("skill-flow-language") || "en";
     let nodeMode = localStorage.getItem("skill-flow-node-mode") === "simple" ? "simple" : "normal";
+    let currentGraphContext = { positions: {}, flows: [] };
+    let selectionDrag = null;
+    let selectionSyncTimer = null;
+    let isSelecting = false;
+    let suppressNextClick = false;
+    let lastExportMarkdown = "";
+    const selectedNodeKeys = new Set();
 
     function escapeHtml(value) {
       return String(value || "")
@@ -775,35 +1032,97 @@
       return Math.min(max, Math.max(min, value));
     }
 
-    function wrapText(text, maxChars) {
-      const words = String(text || "").split(/\s+/);
+    function estimateTextWidth(text, fontSize = 11) {
+      return Array.from(String(text || "")).reduce((width, char) => {
+        if (/[\u3400-\u9fff]/.test(char)) return width + fontSize;
+        if (/\s/.test(char)) return width + fontSize * 0.32;
+        if (/[A-Z]/.test(char)) return width + fontSize * 0.66;
+        if (/[0-9]/.test(char)) return width + fontSize * 0.58;
+        if (/[-_/.:,;]/.test(char)) return width + fontSize * 0.36;
+        return width + fontSize * 0.56;
+      }, 0);
+    }
+
+    function splitTextTokens(text) {
+      const tokens = [];
+      let buffer = "";
+      for (const char of Array.from(String(text || ""))) {
+        if (/[\u3400-\u9fff]/.test(char)) {
+          if (buffer) {
+            tokens.push(buffer);
+            buffer = "";
+          }
+          tokens.push(char);
+        } else if (/\s/.test(char)) {
+          if (buffer) {
+            tokens.push(buffer);
+            buffer = "";
+          }
+          tokens.push(" ");
+        } else {
+          buffer += char;
+        }
+      }
+      if (buffer) tokens.push(buffer);
+      return tokens;
+    }
+
+    function truncateTextToWidth(text, maxWidth, fontSize = 11) {
+      const value = String(text || "").trim();
+      if (!value || maxWidth <= 0) return "";
+      if (estimateTextWidth(value, fontSize) <= maxWidth) return value;
+      const ellipsis = "...";
+      let output = "";
+      for (const char of Array.from(value)) {
+        const next = `${output}${char}`;
+        if (estimateTextWidth(`${next}${ellipsis}`, fontSize) > maxWidth) break;
+        output = next;
+      }
+      return output ? `${output}${ellipsis}` : ellipsis;
+    }
+
+    function wrapTextToWidth(text, maxWidth, fontSize = 11, maxLines = 2) {
+      const value = String(text || "").trim();
+      if (!value || maxWidth <= 0 || maxLines <= 0) return [];
+      const tokens = splitTextTokens(value);
       const lines = [];
       let line = "";
-      for (const word of words) {
-        const next = line ? `${line} ${word}` : word;
-        if (next.length > maxChars && line) {
-          lines.push(line);
-          line = word;
+      for (const token of tokens) {
+        const separator = token === " " || !line || /[\u3400-\u9fff]/.test(token) ? "" : " ";
+        const next = token === " " ? line : `${line}${separator}${token}`;
+        if (estimateTextWidth(next, fontSize) > maxWidth && line) {
+          lines.push(line.trim());
+          if (lines.length >= maxLines) break;
+          line = token === " " ? "" : token;
         } else {
           line = next;
         }
       }
-      if (line) lines.push(line);
-      return lines.slice(0, 3);
-    }
-
-    function truncateText(text, maxChars) {
-      const value = String(text || "");
-      if (value.length <= maxChars) return value;
-      return `${value.slice(0, Math.max(0, maxChars - 3))}...`;
+      if (line && lines.length < maxLines) lines.push(line.trim());
+      const consumed = lines.join("").replace(/\s+/g, "");
+      const compact = value.replace(/\s+/g, "");
+      if (compact.length > consumed.length && lines.length) {
+        lines[lines.length - 1] = truncateTextToWidth(lines[lines.length - 1], maxWidth, fontSize);
+      }
+      return lines
+        .filter(Boolean)
+        .slice(0, maxLines)
+        .map((line) => truncateTextToWidth(line, maxWidth, fontSize));
     }
 
     function langPack() {
       return i18n[currentLang] || i18n.en;
     }
 
+    function localizedEntity(entity) {
+      return entity?.i18n?.[currentLang] || entity?.locales?.[currentLang] || {};
+    }
+
     function localizedNode(node) {
-      const translated = langPack().nodes[node.id] || {};
+      const translated = {
+        ...(langPack().nodes[node.id] || {}),
+        ...localizedEntity(node)
+      };
       return {
         ...node,
         title: translated.title || node.title,
@@ -812,8 +1131,24 @@
       };
     }
 
-    function localizedEdgeLabel(label) {
-      return langPack().edges?.[label] || label || "";
+    function localizedFlowTitle(flow, fallback) {
+      const translated = localizedEntity(flow);
+      return translated.title || flow.title || fallback;
+    }
+
+    function localizedFlowCaption(flow) {
+      const translated = localizedEntity(flow);
+      const flowPrefix = String(flow.flowCodePrefix || flow.flowPrefix || "").toUpperCase();
+      if (translated.caption) return translated.caption;
+      if (translated.routeLabel) return translated.routeLabel;
+      if (currentLang === "zh") return flowPrefix ? `${flowPrefix} 路线` : "路线";
+      return flowPrefix ? `${flowPrefix} route` : "route";
+    }
+
+    function localizedEdgeLabel(edge) {
+      const label = typeof edge === "string" ? edge : edge?.label;
+      const translated = typeof edge === "object" ? localizedEntity(edge) : {};
+      return translated.label || langPack().edges?.[label] || label || "";
     }
 
     function nodeCodeFor(data, node, index) {
@@ -827,6 +1162,427 @@
 
     function scopedNodeId(flowId, nodeId) {
       return `${flowId}::${nodeId}`;
+    }
+
+    function safeSvgId(value) {
+      return String(value || "node").replace(/[^a-zA-Z0-9_-]/g, "-");
+    }
+
+    function markdownText(value) {
+      return String(value || "").trim().replace(/\n+/g, " ");
+    }
+
+    function markdownTitle(value, fallback = "Untitled") {
+      const text = markdownText(value) || fallback;
+      return text.replace(/[#*_`[\]]/g, "");
+    }
+
+    function nodeElementFromTarget(target) {
+      return target?.closest?.(".node[data-node-key]") || null;
+    }
+
+    function clientToWorld(clientX, clientY) {
+      const rect = svg.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left - transform.x) / transform.scale,
+        y: (clientY - rect.top - transform.y) / transform.scale
+      };
+    }
+
+    function rectsIntersect(a, b) {
+      return a.x <= b.x + b.width &&
+        a.x + a.width >= b.x &&
+        a.y <= b.y + b.height &&
+        a.y + a.height >= b.y;
+    }
+
+    function applySelectionUi() {
+      const labels = langPack().selection;
+      const count = selectedNodeKeys.size;
+      selectionCount.textContent = labels.count.replace("{count}", count);
+      selectionExport.textContent = labels.export;
+      selectionExport.disabled = count === 0;
+      selectionClear.title = labels.clear;
+      selectionClear.setAttribute("aria-label", labels.clear);
+      exportTitle.textContent = labels.modalTitle;
+      exportCopy.textContent = labels.copy;
+      exportDownload.textContent = labels.download;
+      document.querySelectorAll(".node[data-node-key]").forEach((nodeEl) => {
+        nodeEl.classList.toggle("selected", selectedNodeKeys.has(nodeEl.dataset.nodeKey));
+      });
+    }
+
+    function pruneSelectionToCurrentGraph() {
+      const validKeys = new Set(Object.keys(currentGraphContext.positions || {}));
+      Array.from(selectedNodeKeys).forEach((key) => {
+        if (!validKeys.has(key)) selectedNodeKeys.delete(key);
+      });
+      applySelectionUi();
+    }
+
+    function setSelection(keys, append = false) {
+      if (!append) selectedNodeKeys.clear();
+      keys.forEach((key) => selectedNodeKeys.add(key));
+      pruneSelectionToCurrentGraph();
+      syncSelectionStateSoon();
+    }
+
+    function toggleNodeSelection(key, additive = false) {
+      if (!key) return;
+      if (!additive) {
+        selectedNodeKeys.clear();
+        selectedNodeKeys.add(key);
+      } else if (selectedNodeKeys.has(key)) {
+        selectedNodeKeys.delete(key);
+      } else {
+        selectedNodeKeys.add(key);
+      }
+      pruneSelectionToCurrentGraph();
+      syncSelectionStateSoon();
+    }
+
+    function selectedNodeEntries() {
+      const entries = [];
+      (currentGraphContext.flows || []).forEach((flowLayout, flowOrder) => {
+        const flowTitle = localizedFlowTitle(flowLayout.flow, flowLayout.id);
+        const flowCaption = localizedFlowCaption(flowLayout.flow);
+        const edges = flowLayout.edges || [];
+        flowLayout.nodes.forEach((node, index) => {
+          const key = scopedNodeId(flowLayout.id, node.id);
+          if (!selectedNodeKeys.has(key)) return;
+          const viewNode = localizedNode(node);
+          entries.push({
+            key,
+            flowId: flowLayout.id,
+            skillName: flowLayout.flow.skillName || flowLayout.flow.name || "",
+            flowTitle,
+            flowCaption,
+            flowOrder,
+            nodeId: node.id,
+            index,
+            totalNodes: flowLayout.nodes.length,
+            code: nodeCodeFor(flowLayout.flow, node, index),
+            title: markdownText(viewNode.title || node.title),
+            description: markdownText(viewNode.description || node.description),
+            details: (viewNode.details || node.details || []).map(markdownText).filter(Boolean),
+            type: node.type || "process",
+            status: node.status || "pending",
+            incoming: edges
+              .filter((edge) => edge.to === node.id)
+              .map((edge) => ({ from: edge.from, label: markdownText(localizedEdgeLabel(edge)) })),
+            outgoing: edges
+              .filter((edge) => edge.from === node.id)
+              .map((edge) => ({ to: edge.to, label: markdownText(localizedEdgeLabel(edge)) }))
+          });
+        });
+      });
+      return entries.sort((a, b) => a.flowOrder - b.flowOrder || a.index - b.index);
+    }
+
+    function buildSelectionSegments(entries) {
+      const segments = [];
+      const byFlow = new Map();
+      entries.forEach((entry) => {
+        if (!byFlow.has(entry.flowId)) byFlow.set(entry.flowId, []);
+        byFlow.get(entry.flowId).push(entry);
+      });
+      byFlow.forEach((flowEntries) => {
+        const sorted = [...flowEntries].sort((a, b) => a.index - b.index);
+        let current = [];
+        sorted.forEach((entry) => {
+          const previous = current[current.length - 1];
+          const connected = previous?.outgoing?.some((edge) => edge.to === entry.nodeId);
+          if (!previous || connected) {
+            current.push(entry);
+          } else {
+            segments.push(current);
+            current = [entry];
+          }
+        });
+        if (current.length) segments.push(current);
+      });
+      return segments;
+    }
+
+    function segmentEdgeLabel(fromEntry, toEntry) {
+      const edge = fromEntry.outgoing.find((item) => item.to === toEntry.nodeId);
+      return edge?.label || "输出";
+    }
+
+    function flowSummaryEntries() {
+      const flows = currentGraphContext.flows || [];
+      return flows.map((flowLayout) => ({
+        flowId: flowLayout.id,
+        skillName: flowLayout.flow.skillName || flowLayout.flow.name || "",
+        title: localizedFlowTitle(flowLayout.flow, flowLayout.id),
+        caption: localizedFlowCaption(flowLayout.flow),
+        nodes: flowLayout.nodes.map((node, index) => {
+          const viewNode = localizedNode(node);
+          return {
+            nodeId: node.id,
+            code: nodeCodeFor(flowLayout.flow, node, index),
+            title: markdownText(viewNode.title || node.title)
+          };
+        })
+      }));
+    }
+
+    function selectedFlowSummaries(entries) {
+      const selectedFlowIds = new Set(entries.map((entry) => entry.flowId));
+      return flowSummaryEntries().filter((flow) => selectedFlowIds.has(flow.flowId));
+    }
+
+    function describeSelectionScope(entries, flowSummaries) {
+      const flowCount = flowSummaries.length;
+      const selectedCount = entries.length;
+      const totalCount = flowSummaries.reduce((count, flow) => count + flow.nodes.length, 0);
+      const selectedCodes = entries.map((entry) => `\`${entry.code}\``).join("、");
+      if (flowCount === 1) {
+        return `用户主动标记了 ${selectedCount} 个 workflow 节点（${selectedCodes}），来自该路线共 ${totalCount} 个节点。这个选择代表一个局部规则片段包，不代表完整 Skill。`;
+      }
+      return `用户主动标记了 ${selectedCount} 个 workflow 节点（${selectedCodes}），来自 ${flowCount} 条路线共 ${totalCount} 个节点。这个选择代表跨路线的局部规则片段包，不代表完整 Skill。`;
+    }
+
+    function buildSelectionStatePayload() {
+      const entries = selectedNodeEntries();
+      const flowSummaries = selectedFlowSummaries(entries);
+      const segments = buildSelectionSegments(entries).map((segment) => segment.map((entry) => ({
+        code: entry.code,
+        nodeId: entry.nodeId,
+        title: entry.title
+      })));
+      let agentInstruction = "当前没有选中节点。";
+      if (entries.length === 1) {
+        const entry = entries[0];
+        agentInstruction = `当前鼠标选中的节点是 ${entry.code}「${entry.title || entry.nodeId}」。在修改前先向用户确认是否要修改这个节点，并检查上游输入与下游输出是否仍能衔接。`;
+      } else if (entries.length > 1) {
+        agentInstruction = `当前鼠标选中了 ${entries.length} 个节点：${entries.map((entry) => `${entry.code}「${entry.title || entry.nodeId}」`).join("、")}。在修改前先向用户确认是批量修改还是逐一修改，并检查这些节点之间及其上下游链路是否仍能跑通。`;
+      }
+      return {
+        version: 1,
+        updatedAt: new Date().toISOString(),
+        updatedAtLocal: new Date().toLocaleString(),
+        language: currentLang,
+        selectedCount: entries.length,
+        selectedKeys: Array.from(selectedNodeKeys),
+        selectedNodes: entries,
+        selectedSegments: segments,
+        flowSummaries,
+        selectionSummary: entries.length ? describeSelectionScope(entries, flowSummaries) : "当前没有选中节点。",
+        agentInstruction
+      };
+    }
+
+    function syncSelectionStateSoon() {
+      window.clearTimeout(selectionSyncTimer);
+      selectionSyncTimer = window.setTimeout(syncSelectionStateNow, 140);
+    }
+
+    async function syncSelectionStateNow() {
+      const payload = buildSelectionStatePayload();
+      try {
+        await fetch("/api/selection-state", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (_error) {
+        // Plain static servers cannot accept selection state. Export MD still works via copy/download.
+      }
+    }
+
+    function buildSelectedNodeMarkdown() {
+      const entries = selectedNodeEntries();
+      if (!entries.length) return "";
+      const segments = buildSelectionSegments(entries);
+      const uniqueFlowTitles = [...new Set(entries.map((entry) => entry.flowTitle).filter(Boolean))];
+      const uniqueSkillNames = [...new Set(entries.map((entry) => entry.skillName).filter(Boolean))];
+      const mainTitle = uniqueFlowTitles.length === 1 ? uniqueFlowTitles[0] : "选中节点";
+      const flowSummaries = selectedFlowSummaries(entries);
+      const sourceSkill = uniqueSkillNames.length === 1 ? uniqueSkillNames[0] : uniqueSkillNames.join("、") || "未命名 Skill";
+      const generatedAt = new Date().toLocaleString();
+      const lines = [
+        `# ${markdownTitle(mainTitle)} - Skill 规则片段包`,
+        "",
+        "## 片段用途",
+        "这是一组从目标 Skill 工作流中提取的局部规则片段，用于后续整合进完整 Skill。它不是完整 Skill，而是用户主动标记的一组候选规则模块。",
+        "",
+        "## 来源上下文",
+        `- 来源 Skill：\`${sourceSkill}\``,
+        `- 来源路线：${flowSummaries.map((flow) => `${flow.title}（${flow.caption}）`).join("；")}`,
+        `- 选择范围：${describeSelectionScope(entries, flowSummaries)}`,
+        `- 组装目标：把这些临时标记的能力点整理为可复用、可拼接的 Skill 规则，方便未来接入目标 Skill。`,
+        "",
+        "## 给 Agent 的处理方式",
+        "请把本文件当作可拼接的 Skill 规则素材包处理。若目标 Skill 已存在，优先按片段标题、节点 code 和上下游关系合并到相近 workflow；若目标 Skill 尚未建立，请先保存为候选能力模块，后续再根据完整需求组装。",
+        "",
+        "## 主要功能",
+        `将用户选中的节点转写为可复用、可拼接的 Skill 规则片段。相邻上下游节点按协作链路整理，非相邻节点按独立能力块暂存。`,
+        "",
+        "## 组装原则",
+        "- 保留每个片段的输入条件、处理动作、输出结果和边界约束。",
+        "- 相邻上下游节点应合并成连续流程，重点补齐节点之间的交接条件。",
+        "- 非相邻节点应作为独立能力块保存，等待未来根据目标 Skill 的完整 workflow 再决定插入位置。",
+        "- 保留节点 code，方便回溯原始 workflow 和后续重组。",
+        ""
+      ];
+
+      segments.forEach((segment, segmentIndex) => {
+        const connected = segment.length > 1;
+        const title = connected
+          ? segment.map((entry) => entry.title || entry.code).join(" → ")
+          : segment[0].title || segment[0].code;
+        lines.push(`## 规则片段 ${segmentIndex + 1}：${markdownTitle(title, `片段 ${segmentIndex + 1}`)}`);
+        lines.push("");
+        lines.push(`适用节点：${segment.map((entry) => `\`${entry.code}\``).join(connected ? " → " : "、")}`);
+        lines.push("");
+        lines.push("### 功能目标");
+        if (connected) {
+          lines.push(`将 ${segment.map((entry) => `「${entry.title || entry.code}」`).join("、")} 组织为一段连续能力链路，保证上一步产出能自然交给下一步。`);
+        } else {
+          const entry = segment[0];
+          lines.push(`沉淀「${entry.title || entry.code}」这一项独立能力，后续可按需要插入到其他 Skill 流程中。`);
+        }
+        lines.push("");
+        lines.push("### 功能与实现逻辑");
+        segment.forEach((entry, index) => {
+          const detailText = entry.details.length ? ` 实现线索：${entry.details.join("；")}。` : "";
+          const descText = entry.description || "根据该节点职责补充输入、处理和输出要求。";
+          lines.push(`${index + 1}. \`${entry.code}\` ${entry.title || entry.nodeId}：${descText}${detailText}`);
+        });
+        lines.push("");
+        lines.push("### 协作衔接");
+        if (connected) {
+          for (let index = 0; index < segment.length - 1; index += 1) {
+            const from = segment[index];
+            const to = segment[index + 1];
+            lines.push(`- \`${from.code}\` 完成「${from.title || from.nodeId}」后，通过「${segmentEdgeLabel(from, to)}」交给 \`${to.code}\`，继续执行「${to.title || to.nodeId}」。`);
+          }
+        } else {
+          lines.push("- 这是非相邻或单点节点，先作为独立规则块保存；未来组装时再根据上下文补齐前置输入和后续输出。");
+        }
+        lines.push("");
+        lines.push("### 拼接建议");
+        lines.push("- 保留本片段的输入条件、处理动作和输出结果三类信息。");
+        lines.push("- 拼入完整 Skill 时，把本片段放进 `## Workflow` 或对应能力章节，并根据相邻片段补齐边界条件。");
+        lines.push("");
+      });
+
+      lines.push("## 原始节点数据");
+      entries.forEach((entry) => {
+        const incomingText = entry.incoming.length
+          ? entry.incoming.map((edge) => `${edge.from}${edge.label ? ` / ${edge.label}` : ""}`).join("；")
+          : "无或未选中上游";
+        const outgoingText = entry.outgoing.length
+          ? entry.outgoing.map((edge) => `${edge.to}${edge.label ? ` / ${edge.label}` : ""}`).join("；")
+          : "无或未选中下游";
+        lines.push(`- \`${entry.code}\` ${entry.title || entry.nodeId}`);
+        lines.push(`  - 节点 ID：${entry.nodeId}`);
+        lines.push(`  - 所属路线：${entry.flowTitle}（${entry.flowCaption}）`);
+        lines.push(`  - 完整路线位置：第 ${entry.index + 1} / ${entry.totalNodes} 个节点`);
+        lines.push(`  - 节点类型/状态：${entry.type} / ${entry.status}`);
+        lines.push(`  - 节点职责：${entry.description || "未提供描述"}`);
+        if (entry.details.length) lines.push(`  - 实现线索：${entry.details.join("；")}`);
+        lines.push(`  - 上游关系：${incomingText}`);
+        lines.push(`  - 下游关系：${outgoingText}`);
+      });
+      lines.push("");
+      lines.push("## 完整路线参考");
+      flowSummaries.forEach((flow) => {
+        lines.push(`- ${flow.title}（${flow.caption}）：${flow.nodes.map((node) => `\`${node.code}\` ${node.title || node.nodeId}`).join(" → ")}`);
+      });
+      lines.push("");
+      lines.push("## 导出元信息");
+      lines.push(`- 导出工具：skill-flow-visualizer`);
+      lines.push(`- 导出时间：${generatedAt}`);
+      lines.push("- 说明：导出工具只表示素材来源；正文规则片段可以脱离该工具独立使用。");
+      lines.push("");
+      return lines.join("\n");
+    }
+
+    async function copyText(value) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+      const textArea = document.createElement("textarea");
+      textArea.value = value;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copied = document.execCommand("copy");
+      textArea.remove();
+      return copied;
+    }
+
+    async function tryBridgeExport(markdown, entries) {
+      const payload = {
+        generatedAt: new Date().toISOString(),
+        language: currentLang,
+        markdown,
+        selection: entries,
+        segments: buildSelectionSegments(entries).map((segment) => segment.map((entry) => entry.code))
+      };
+      const response = await fetch("/api/selection-export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`Bridge unavailable: ${response.status}`);
+      return response.json();
+    }
+
+    function showExportPanel(markdown, statusText = "") {
+      lastExportMarkdown = markdown;
+      exportOutput.value = markdown;
+      exportStatus.textContent = statusText;
+      exportPanel.hidden = false;
+      exportOutput.focus();
+      exportOutput.select();
+    }
+
+    function hideExportPanel() {
+      exportPanel.hidden = true;
+    }
+
+    function downloadMarkdown(markdown) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `selected-skill-rules-${stamp}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    async function exportSelectedNodes() {
+      const labels = langPack().selection;
+      const entries = selectedNodeEntries();
+      if (!entries.length) {
+        exportStatus.textContent = labels.empty;
+        return;
+      }
+      const markdown = buildSelectedNodeMarkdown();
+      let statusText = labels.bridgeUnavailable;
+      let bridgeSaved = false;
+      try {
+        await tryBridgeExport(markdown, entries);
+        bridgeSaved = true;
+        statusText = labels.bridgeSaved;
+      } catch (_error) {
+        statusText = labels.bridgeUnavailable;
+      }
+      try {
+        await copyText(markdown);
+        statusText = statusText === labels.bridgeSaved ? labels.bridgeSaved : labels.copied;
+      } catch (_error) {
+        statusText = bridgeSaved ? labels.bridgeSaved : labels.copyFailed;
+      }
+      showExportPanel(markdown, statusText);
     }
 
     function nodesWithRuntimeStatus(data, runtimeState = {}) {
@@ -888,6 +1644,7 @@
       document.getElementById("done-label").textContent = langPack().statusLabels.done;
       document.getElementById("active-label").textContent = langPack().statusLabels.active;
       document.getElementById("pending-label").textContent = langPack().statusLabels.pending;
+      applySelectionUi();
       setSyncState();
       document.querySelectorAll(".language-option").forEach((option) => {
         const active = option.dataset.lang === currentLang;
@@ -1042,12 +1799,12 @@
         </defs>
       `;
       const flowMarkup = flows.map((flowLayout) => {
-        const flowTitle = flowLayout.flow.title || flowLayout.id;
-        const flowPrefix = String(flowLayout.flow.flowCodePrefix || flowLayout.flow.flowPrefix || "").toUpperCase();
+        const flowTitle = localizedFlowTitle(flowLayout.flow, flowLayout.id);
+        const flowCaption = localizedFlowCaption(flowLayout.flow);
         const titleMarkup = `
           <g transform="translate(${flowLayout.x}, ${flowLayout.y})">
             <text class="flow-label" x="${flowLayout.width / 2}" y="17" text-anchor="middle">${escapeHtml(flowTitle)}</text>
-            <text class="flow-caption" x="${flowLayout.width / 2}" y="33" text-anchor="middle">${escapeHtml(flowPrefix ? `${flowPrefix} route` : "route")}</text>
+            <text class="flow-caption" x="${flowLayout.width / 2}" y="33" text-anchor="middle">${escapeHtml(flowCaption)}</text>
           </g>
         `;
         const edgeMarkup = flowLayout.edges.map((edge) => {
@@ -1055,33 +1812,46 @@
           const to = positions[scopedNodeId(flowLayout.id, edge.to)];
           if (!from || !to) return "";
           const geometry = edgeGeometry(from, to);
+          const edgeLabelText = truncateTextToWidth(localizedEdgeLabel(edge), 128, 10);
           return `
             <path class="edge" d="${geometry.d}" marker-end="url(#arrow)"></path>
-            <text class="edge-label" x="${geometry.labelX}" y="${geometry.labelY}" text-anchor="${geometry.anchor}">${escapeHtml(localizedEdgeLabel(edge.label))}</text>
+            <text class="edge-label" x="${geometry.labelX}" y="${geometry.labelY}" text-anchor="${geometry.anchor}">${escapeHtml(edgeLabelText)}</text>
           `;
         }).join("");
         const nodeMarkup = flowLayout.nodes.map((node, index) => {
           const viewNode = localizedNode(node);
           const p = positions[scopedNodeId(flowLayout.id, node.id)];
           const color = typeColors[node.type] || "var(--pending)";
-          const lines = wrapText(viewNode.description, currentLang === "zh" ? 18 : 38);
           const detail = (viewNode.details || [])[0] || node.type || "";
           const statusText = langPack().statusLabels[node.status] || node.status || langPack().statusLabels.pending;
           const isSimple = nodeMode === "simple";
           const codeText = nodeCodeFor(flowLayout.flow, node, index);
           const codeX = isSimple ? 44 : 34;
           const titleX = isSimple ? 82 : 68;
-          const titleText = isSimple ? truncateText(viewNode.title, currentLang === "zh" ? 20 : 28) : viewNode.title;
           const rectRadius = isSimple ? p.height / 2 : 8;
+          const statusWidth = estimateTextWidth(statusText, isSimple ? 12 : 10);
+          const titleMaxWidth = p.width - titleX - statusWidth - (isSimple ? 42 : 34);
+          const titleText = truncateTextToWidth(viewNode.title, titleMaxWidth, isSimple ? 16 : 14);
+          const contentWidth = p.width - 36;
+          const lines = wrapTextToWidth(viewNode.description, contentWidth, 11, 3);
+          const detailText = truncateTextToWidth(detail, contentWidth, 10);
+          const clipId = `clip-${safeSvgId(flowLayout.id)}-${safeSvgId(node.id)}`;
+          const nodeKey = scopedNodeId(flowLayout.id, node.id);
+          const selectedClass = selectedNodeKeys.has(nodeKey) ? " selected" : "";
           return `
-            <g class="node node-${escapeHtml(nodeMode)} ${escapeHtml(node.status || "pending")}" transform="translate(${p.x}, ${p.y})">
+            <g class="node node-${escapeHtml(nodeMode)} ${escapeHtml(node.status || "pending")}${selectedClass}" data-node-key="${escapeHtml(nodeKey)}" data-flow-id="${escapeHtml(flowLayout.id)}" data-node-id="${escapeHtml(node.id)}" transform="translate(${p.x}, ${p.y})">
+              <clipPath id="${clipId}">
+                <rect x="1" y="1" width="${p.width - 2}" height="${p.height - 2}" rx="${rectRadius}"></rect>
+              </clipPath>
               <rect width="${p.width}" height="${p.height}" rx="${rectRadius}"></rect>
-              <circle cx="${isSimple ? 24 : 18}" cy="${isSimple ? 26 : 20}" r="${isSimple ? 8 : 7}" fill="${color}" stroke="var(--border)" stroke-width="1"></circle>
-              <text class="node-code" x="${codeX}" y="${isSimple ? 31 : 25}">${escapeHtml(codeText)}</text>
-              <text class="node-title" x="${titleX}" y="${isSimple ? 31 : 25}">${escapeHtml(titleText)}</text>
-              <text class="node-status" x="${p.width - (isSimple ? 20 : 14)}" y="${isSimple ? 31 : 24}" text-anchor="end">${escapeHtml(statusText)}</text>
-              ${isSimple ? "" : lines.map((line, idx) => `<text class="node-desc" x="18" y="${52 + idx * 16}">${escapeHtml(line)}</text>`).join("")}
-              ${isSimple ? "" : `<text class="node-chip" x="18" y="${p.height - 15}">${escapeHtml(detail.slice(0, 32))}</text>`}
+              <g clip-path="url(#${clipId})">
+                <circle cx="${isSimple ? 24 : 18}" cy="${isSimple ? 26 : 20}" r="${isSimple ? 8 : 7}" fill="${color}" stroke="var(--border)" stroke-width="1"></circle>
+                <text class="node-code" x="${codeX}" y="${isSimple ? 31 : 25}">${escapeHtml(codeText)}</text>
+                <text class="node-title" x="${titleX}" y="${isSimple ? 31 : 25}">${escapeHtml(titleText)}</text>
+                <text class="node-status" x="${p.width - (isSimple ? 20 : 14)}" y="${isSimple ? 31 : 24}" text-anchor="end">${escapeHtml(statusText)}</text>
+                ${isSimple ? "" : lines.map((line, idx) => `<text class="node-desc" x="18" y="${52 + idx * 16}">${escapeHtml(line)}</text>`).join("")}
+                ${isSimple ? "" : `<text class="node-chip" x="18" y="${p.height - 15}">${escapeHtml(detailText)}</text>`}
+              </g>
             </g>
           `;
         }).join("");
@@ -1089,6 +1859,9 @@
       }).join("");
       svg.innerHTML = `${defs}<rect class="world-grid-fill" width="100%" height="100%" fill="url(#world-grid-pattern)"></rect><g class="viewport-layer" id="viewport-layer">${flowMarkup}</g>`;
       viewportLayer = document.getElementById("viewport-layer");
+      currentGraphContext = { positions, flows };
+      pruneSelectionToCurrentGraph();
+      syncSelectionStateSoon();
       updateSidePanel({ nodes: flows.flatMap((flow) => flow.nodes) });
       const layoutSignature = [
         currentLang,
@@ -1116,7 +1889,75 @@
       `).join("");
     }
 
+    function startSelectionMarquee(event) {
+      event.preventDefault();
+      setLanguageMenuOpen(false);
+      isSelecting = true;
+      selectionDrag = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        currentClientX: event.clientX,
+        currentClientY: event.clientY,
+        additive: event.shiftKey || event.metaKey || event.ctrlKey
+      };
+      canvasWrap.classList.add("selecting");
+      svg.setPointerCapture(event.pointerId);
+      updateSelectionMarquee(event);
+    }
+
+    function updateSelectionMarquee(event) {
+      if (!selectionDrag) return;
+      selectionDrag.currentClientX = event.clientX;
+      selectionDrag.currentClientY = event.clientY;
+      const wrapRect = canvasWrap.getBoundingClientRect();
+      const left = Math.min(selectionDrag.startClientX, event.clientX) - wrapRect.left;
+      const top = Math.min(selectionDrag.startClientY, event.clientY) - wrapRect.top;
+      const width = Math.abs(event.clientX - selectionDrag.startClientX);
+      const height = Math.abs(event.clientY - selectionDrag.startClientY);
+      selectionMarquee.style.left = `${left}px`;
+      selectionMarquee.style.top = `${top}px`;
+      selectionMarquee.style.width = `${width}px`;
+      selectionMarquee.style.height = `${height}px`;
+      selectionMarquee.classList.toggle("active", width > 3 || height > 3);
+    }
+
+    function finishSelectionMarquee(event) {
+      if (!selectionDrag || event.pointerId !== selectionDrag.pointerId) return false;
+      const start = clientToWorld(selectionDrag.startClientX, selectionDrag.startClientY);
+      const end = clientToWorld(selectionDrag.currentClientX, selectionDrag.currentClientY);
+      const worldRect = {
+        x: Math.min(start.x, end.x),
+        y: Math.min(start.y, end.y),
+        width: Math.abs(end.x - start.x),
+        height: Math.abs(end.y - start.y)
+      };
+      const moved = Math.abs(selectionDrag.currentClientX - selectionDrag.startClientX) > 4 ||
+        Math.abs(selectionDrag.currentClientY - selectionDrag.startClientY) > 4;
+      if (moved) {
+        const keys = Object.entries(currentGraphContext.positions || {})
+          .filter(([, rect]) => rectsIntersect(worldRect, rect))
+          .map(([key]) => key);
+        setSelection(keys, selectionDrag.additive);
+      } else if (!selectionDrag.additive) {
+        selectedNodeKeys.clear();
+        applySelectionUi();
+        syncSelectionStateSoon();
+      }
+      selectionMarquee.classList.remove("active");
+      canvasWrap.classList.remove("selecting");
+      selectionDrag = null;
+      isSelecting = false;
+      suppressNextClick = true;
+      return true;
+    }
+
     svg.addEventListener("pointerdown", (event) => {
+      const nodeEl = nodeElementFromTarget(event.target);
+      if (event.pointerType === "mouse" && event.button === 0 && !nodeEl) {
+        startSelectionMarquee(event);
+        return;
+      }
       if (event.pointerType === "mouse" && event.button !== 1) return;
       event.preventDefault();
       isPanning = true;
@@ -1132,6 +1973,11 @@
     });
 
     svg.addEventListener("pointermove", (event) => {
+      if (isSelecting && selectionDrag && event.pointerId === selectionDrag.pointerId) {
+        event.preventDefault();
+        updateSelectionMarquee(event);
+        return;
+      }
       if (!isPanning || !panStart || event.pointerId !== panStart.pointerId) return;
       event.preventDefault();
       transform.x = panStart.tx + event.clientX - panStart.x;
@@ -1140,6 +1986,7 @@
     });
 
     function endPan(event) {
+      if (finishSelectionMarquee(event)) return;
       if (panStart && event.pointerId === panStart.pointerId) {
         isPanning = false;
         panStart = null;
@@ -1150,6 +1997,17 @@
     svg.addEventListener("pointerup", endPan);
     svg.addEventListener("pointercancel", endPan);
     svg.addEventListener("auxclick", (event) => event.preventDefault());
+
+    svg.addEventListener("click", (event) => {
+      if (suppressNextClick) {
+        suppressNextClick = false;
+        return;
+      }
+      const nodeEl = nodeElementFromTarget(event.target);
+      if (!nodeEl) return;
+      event.stopPropagation();
+      toggleNodeSelection(nodeEl.dataset.nodeKey, event.shiftKey || event.metaKey || event.ctrlKey);
+    });
 
     svg.addEventListener("wheel", (event) => {
       event.preventDefault();
@@ -1230,6 +2088,46 @@
       applyNodeMode();
     });
 
+    selectionExport.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setLanguageMenuOpen(false);
+      exportSelectedNodes();
+    });
+
+    selectionClear.addEventListener("click", (event) => {
+      event.stopPropagation();
+      selectedNodeKeys.clear();
+      applySelectionUi();
+      syncSelectionStateSoon();
+    });
+
+    exportClose.addEventListener("click", (event) => {
+      event.stopPropagation();
+      hideExportPanel();
+    });
+
+    exportCopy.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const labels = langPack().selection;
+      try {
+        await copyText(lastExportMarkdown || exportOutput.value);
+        exportStatus.textContent = labels.copied;
+      } catch (_error) {
+        exportStatus.textContent = labels.copyFailed;
+      }
+    });
+
+    exportDownload.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!lastExportMarkdown && !exportOutput.value) return;
+      downloadMarkdown(lastExportMarkdown || exportOutput.value);
+      exportStatus.textContent = langPack().selection.downloaded;
+    });
+
+    exportPanel.addEventListener("click", (event) => {
+      if (event.target === exportPanel) hideExportPanel();
+    });
+
     document.querySelectorAll(".language-option").forEach((option) => {
       option.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -1249,6 +2147,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         setLanguageMenuOpen(false);
+        hideExportPanel();
       }
     });
 
@@ -1281,6 +2180,30 @@
     }, { passive: false });
 
     nodeModeToggle.addEventListener("touchmove", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    selectionToolbar.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    selectionToolbar.addEventListener("wheel", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    selectionToolbar.addEventListener("touchstart", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    selectionToolbar.addEventListener("touchmove", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    exportPanel.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    exportPanel.addEventListener("wheel", (event) => {
       event.stopPropagation();
     }, { passive: false });
 
