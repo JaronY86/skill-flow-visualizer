@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skill Flow Visualizer</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f1f1f1;
+      --canvas: #fafafa;
+      --grid-line: rgba(0, 0, 0, 0.08);
+      --panel: #f7f7f7;
+      --panel-2: #ffffff;
+      --line: #8c8c8c;
+      --border: #cfcfcf;
+      --text: #111111;
+      --muted: #6f6f6f;
+      --subtle: #9a9a9a;
+      --done: #151515;
+      --active: #e53935;
+      --sync: #e53935;
+      --pending: #b8b8b8;
+      --input: #64b5ff;
+      --process: #a48cff;
+      --check: #42d6c1;
+      --decision: #ff9b62;
+      --figma: #ff6b9d;
+      --output: #9bd66f;
+      --floating-control-width: 168px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    .shell {
+      min-height: 100vh;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      height: 100vh;
+      min-height: 0;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background-color: var(--canvas);
+      cursor: default;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .sync-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: min(var(--floating-control-width), calc(100% - 24px));
+      padding: 7px 10px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .language-menu {
+      position: absolute;
+      top: 48px;
+      right: 12px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: min(var(--floating-control-width), calc(100% - 24px));
+      padding: 7px 10px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+    }
+
+    .language-menu span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .language-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .language-current {
+      color: var(--text);
+    }
+
+    .chevron {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid var(--muted);
+      transition: transform 160ms ease;
+    }
+
+    .language-menu.open .chevron {
+      transform: rotate(180deg);
+    }
+
+    .language-options {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 100%;
+      overflow: hidden;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+      opacity: 0;
+      transform: translateY(-6px) scaleY(0.86);
+      transform-origin: top right;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 180ms ease;
+    }
+
+    .language-menu.open .language-options {
+      opacity: 1;
+      transform: translateY(0) scaleY(1);
+      pointer-events: auto;
+    }
+
+    .language-option {
+      display: flex;
+      width: 100%;
+      min-height: 34px;
+      align-items: center;
+      padding: 0 12px;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: background 120ms ease, color 120ms ease;
+    }
+
+    .language-option:hover,
+    .language-option.active {
+      background: #eeeeee;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--sync);
+      box-shadow: 0 0 0 5px rgba(229, 57, 53, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .node-mode-toggle {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 10px;
+      border: 1px solid rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      backdrop-filter: blur(10px);
+      pointer-events: auto;
+      cursor: default;
+    }
+
+    .node-mode-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      cursor: default;
+    }
+
+    .mode-track {
+      position: relative;
+      width: 29px;
+      height: 16px;
+      border-radius: 999px;
+      background: #dddddd;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.13);
+      transition: background 160ms ease;
+    }
+
+    .mode-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--text);
+      transition: transform 180ms ease, background 160ms ease;
+    }
+
+    .node-mode-toggle.normal .mode-thumb {
+      transform: translateX(0);
+      background: var(--text);
+    }
+
+    .node-mode-toggle.simple .mode-track {
+      background: #d0d0d0;
+    }
+
+    .node-mode-toggle.simple .mode-thumb {
+      transform: translateX(13px);
+      background: var(--active);
+    }
+
+    .node-mode-option {
+      min-width: 24px;
+      color: var(--muted);
+      font-size: 12px;
+      transition: color 140ms ease;
+    }
+
+    .node-mode-toggle.normal .node-mode-option-normal,
+    .node-mode-toggle.simple .node-mode-option-simple {
+      color: var(--text);
+    }
+
+    .canvas-wrap.dragging {
+      cursor: default;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background-color: var(--canvas);
+      touch-action: none;
+    }
+
+    .world-grid-fill {
+      pointer-events: none;
+    }
+
+    .world-grid-line {
+      fill: none;
+      stroke: var(--grid-line);
+      stroke-width: 1;
+      shape-rendering: crispEdges;
+    }
+
+    aside {
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--pending);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      padding: 10px;
+      border-radius: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 18px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .viewport-layer {
+      transform-origin: 0 0;
+    }
+
+    .node rect {
+      fill: #ffffff;
+      stroke: var(--border);
+      stroke-width: 1.5;
+    }
+
+    .flow-label {
+      fill: var(--text);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .flow-caption {
+      fill: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .node.done rect {
+      stroke: #a9a9a9;
+    }
+
+    .node.active rect {
+      stroke: var(--active);
+      stroke-width: 2.5;
+      filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.14));
+    }
+
+    .node.pending rect {
+      stroke: var(--pending);
+      opacity: 0.88;
+    }
+
+    .node-title {
+      fill: var(--text);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .node-code {
+      fill: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .node-desc {
+      fill: var(--muted);
+      font-size: 11px;
+    }
+
+    .node-chip {
+      font-size: 10px;
+      font-weight: 600;
+      fill: var(--subtle);
+    }
+
+    .node-status {
+      font-size: 10px;
+      fill: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .node.node-simple .node-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .node.node-simple .node-code {
+      font-size: 11px;
+    }
+
+    .node.node-simple .node-status {
+      font-size: 12px;
+    }
+
+    .edge {
+      fill: none;
+      stroke: var(--line);
+      stroke-width: 2;
+    }
+
+    .edge-label {
+      fill: var(--muted);
+      font-size: 10px;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+
+      aside {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 188px;
+        grid-template-rows: auto auto;
+        align-items: start;
+        gap: 6px 10px;
+        max-height: 132px;
+        padding: 8px 12px 10px;
+        overflow: hidden;
+      }
+
+      aside .section-title {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1.1;
+      }
+
+      aside .section-title:nth-of-type(1) {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      aside .section-title:nth-of-type(2) {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      .legend {
+        grid-column: 1;
+        grid-row: 2;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px 10px;
+        align-content: start;
+      }
+
+      .legend-row {
+        gap: 5px;
+        font-size: 10px;
+        line-height: 1.15;
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+      }
+
+      .stats {
+        grid-column: 2;
+        grid-row: 2;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        margin: 0;
+      }
+
+      .stat {
+        min-width: 0;
+        padding: 7px 6px;
+        border-radius: 7px;
+      }
+
+      .stat strong {
+        font-size: 15px;
+        line-height: 1;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 3px;
+        font-size: 9px;
+        line-height: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <main>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <div class="sync-badge"><span class="pulse"></span><span id="sync-state">Polling</span></div>
+        <div class="language-menu" id="language-menu">
+          <span id="language-label">Language</span>
+          <button class="language-trigger" id="language-trigger" type="button" aria-expanded="false" aria-controls="language-options">
+            <span class="language-current" id="language-current">English</span>
+            <span class="chevron" aria-hidden="true"></span>
+          </button>
+          <div class="language-options" id="language-options" role="listbox" aria-label="Language options">
+            <button class="language-option" type="button" role="option" data-lang="en">English</button>
+            <button class="language-option" type="button" role="option" data-lang="zh">中文</button>
+          </div>
+        </div>
+        <div class="node-mode-toggle normal" id="node-mode-toggle">
+          <button class="node-mode-button" id="node-mode-button" type="button" aria-pressed="false">
+            <span class="node-mode-option node-mode-option-normal" id="node-mode-normal">Normal</span>
+            <span class="mode-track" aria-hidden="true"><span class="mode-thumb"></span></span>
+            <span class="node-mode-option node-mode-option-simple" id="node-mode-simple">Simple</span>
+          </button>
+        </div>
+        <svg id="graph" role="img" aria-label="Skill flow graph"></svg>
+      </div>
+      <aside>
+        <p class="section-title" id="node-colors-title">Node Colors</p>
+        <div class="legend" id="legend"></div>
+        <p class="section-title" id="status-title">Status</p>
+        <div class="stats">
+          <div class="stat"><strong id="done-count">0</strong><span id="done-label">done</span></div>
+          <div class="stat"><strong id="active-count">0</strong><span id="active-label">active</span></div>
+          <div class="stat"><strong id="pending-count">0</strong><span id="pending-label">pending</span></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const svg = document.getElementById("graph");
+    const canvasWrap = document.getElementById("canvas-wrap");
+    const languageMenu = document.getElementById("language-menu");
+    const languageTrigger = document.getElementById("language-trigger");
+    const languageCurrent = document.getElementById("language-current");
+    const nodeModeToggle = document.getElementById("node-mode-toggle");
+    const nodeModeButton = document.getElementById("node-mode-button");
+    const nodeModeNormal = document.getElementById("node-mode-normal");
+    const nodeModeSimple = document.getElementById("node-mode-simple");
+    const typeColors = {
+      input: "var(--input)",
+      process: "var(--process)",
+      check: "var(--check)",
+      decision: "var(--decision)",
+      figma: "var(--figma)",
+      output: "var(--output)"
+    };
+    const i18n = {
+      en: {
+        languageLabel: "Language",
+        nodeModeLabel: "Node",
+        nodeModes: {
+          normal: "Normal",
+          simple: "Simple"
+        },
+        nodeColors: "Node Colors",
+        status: "Status",
+        syncPrefix: "Synced",
+        syncError: "Sync error",
+        statusLabels: {
+          done: "done",
+          active: "active",
+          pending: "pending"
+        },
+        typeLabels: {
+          input: "Input",
+          process: "Process",
+          check: "Check",
+          decision: "Decision",
+          figma: "Figma",
+          output: "Output"
+        },
+        nodes: {}
+      },
+      zh: {
+        languageLabel: "语言",
+        nodeModeLabel: "节点",
+        nodeModes: {
+          normal: "正常",
+          simple: "简化"
+        },
+        nodeColors: "节点颜色",
+        status: "状态",
+        syncPrefix: "已同步",
+        syncError: "同步错误",
+        statusLabels: {
+          done: "完成",
+          active: "进行中",
+          pending: "待处理"
+        },
+        typeLabels: {
+          input: "输入",
+          process: "处理",
+          check: "校验",
+          decision: "判断",
+          figma: "Figma",
+          output: "输出"
+        },
+        nodes: {
+          "input-image": {
+            title: "解析输入图片",
+            description: "使用用户上传图片、本地路径或工作区图片。",
+            details: ["支持 PNG、JPG、JPEG、WebP", "保留原图不变"]
+          },
+          "birefnet-cutout": {
+            title: "运行本地 BiRefNet",
+            description: "运行 scripts/run_birefnet_cutout.py 并生成 RGBA PNG。",
+            details: ["优先使用本地缓存", "输出：<source>-birefnet-cutout.png"]
+          },
+          "verify-alpha": {
+            title: "校验透明 PNG",
+            description: "确认输出存在、格式为 RGBA，并包含真实透明通道。",
+            details: ["模式：RGBA", "Alpha 范围应包含透明和不透明值"]
+          },
+          "review-cutout": {
+            title: "确认抠图预览",
+            description: "先把透明 PNG 展示给用户，并等待用户确认。",
+            details: ["合适：继续写入 Figma", "不合适：返回重新生成"]
+          },
+          "resolve-figma-target": {
+            title: "解析 Figma 目标",
+            description: "解析 fileKey/nodeId，并按节点 ID 或图层名查找目标图层。",
+            details: ["优先显式 node ID", "其次图层名", "最后安全默认放置"]
+          },
+          "upload-asset": {
+            title: "上传 PNG 资源",
+            description: "把生成的 PNG 上传到当前 Figma 文件。",
+            details: ["使用 upload_assets", "记录返回的 imageHash"]
+          },
+          "apply-fill": {
+            title: "应用图片填充",
+            description: "用上传后的 imageHash 将目标图层设置为 IMAGE fill。",
+            details: ["目标：SkillTest_Fill", "scaleMode：FIT"]
+          },
+          "export-preview": {
+            title: "导出 Figma 预览",
+            description: "导出目标节点截图，并回传到 Agent 平台。",
+            details: ["来自 Figma 的节点截图", "保存到 outputs/ 并展示预览"]
+          },
+          "report-result": {
+            title: "回传结果",
+            description: "返回本地路径、Figma 节点 ID 和预览图。",
+            details: ["必要时说明已修改的 Skill 文档", "保持最终摘要简洁"]
+          },
+          "upload-image": {
+            title: "上传图片",
+            description: "让用户上传或提供要插入 Figma 的图片。",
+            details: ["支持 PNG、JPG、JPEG、WebP", "保留原图不变"]
+          },
+          "resolve-figma-link": {
+            title: "解析 Figma 链接",
+            description: "解析用户提供的 Figma URL，提取 fileKey 和可选 nodeId。",
+            details: ["需要 Figma design URL", "将 node-id 转为节点 ID"]
+          },
+          "resolve-insert-target": {
+            title: "解析插入目标",
+            description: "查找目标 Frame 或图层，必要时选择安全默认位置。",
+            details: ["优先显式 node ID", "其次图层名", "必要时新建图片节点"]
+          },
+          "upload-figma-asset": {
+            title: "上传 Figma 资源",
+            description: "把用户图片上传到当前 Figma 文件。",
+            details: ["使用 upload_assets", "记录返回的 imageHash"]
+          },
+          "insert-image-node": {
+            title: "插入图片节点",
+            description: "创建或更新 Figma 节点，并应用上传后的图片填充。",
+            details: ["保留图片比例", "默认使用 FIT"]
+          },
+          "export-figma-preview": {
+            title: "导出 Figma 预览",
+            description: "导出插入节点或目标 Frame 的预览图并回传。",
+            details: ["使用 Figma 截图/导出", "保存到 outputs/"]
+          },
+          "report-insert-result": {
+            title: "回传插入结果",
+            description: "返回图片路径、Figma 节点 ID、文件链接和预览图。",
+            details: ["保持最终摘要简洁", "说明新建的节点名称"]
+          }
+        },
+        edges: {
+          "image path": "图片路径",
+          "RGBA PNG": "RGBA PNG",
+          "valid cutout": "抠图有效",
+          "transparent preview": "透明图预览",
+          "approved": "用户确认合适",
+          "retry cutout": "不合适，重新生成",
+          "target found": "找到目标",
+          "Figma node": "Figma 节点",
+          "image ready": "图片已就绪",
+          "Figma URL": "Figma 链接",
+          "target ready": "目标已就绪",
+          "imageHash": "imageHash",
+          "inserted node": "已插入节点",
+          "preview PNG": "预览 PNG"
+        }
+      }
+    };
+    const transform = { x: 0, y: 0, scale: 1 };
+    const gridSize = 24;
+    const loopEdgeOffset = 76;
+    const minScale = 0.35;
+    const maxScale = 2.8;
+    let lastHash = "";
+    let viewportLayer = null;
+    let hasInitialFit = false;
+    let lastLayoutSignature = "";
+    let isPanning = false;
+    let panStart = null;
+    let touchStart = null;
+    let lastData = null;
+    let lastRuntimeState = {};
+    let lastSyncTime = null;
+    let currentLang = localStorage.getItem("skill-flow-language") || "en";
+    let nodeMode = localStorage.getItem("skill-flow-node-mode") === "simple" ? "simple" : "normal";
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function wrapText(text, maxChars) {
+      const words = String(text || "").split(/\s+/);
+      const lines = [];
+      let line = "";
+      for (const word of words) {
+        const next = line ? `${line} ${word}` : word;
+        if (next.length > maxChars && line) {
+          lines.push(line);
+          line = word;
+        } else {
+          line = next;
+        }
+      }
+      if (line) lines.push(line);
+      return lines.slice(0, 3);
+    }
+
+    function truncateText(text, maxChars) {
+      const value = String(text || "");
+      if (value.length <= maxChars) return value;
+      return `${value.slice(0, Math.max(0, maxChars - 3))}...`;
+    }
+
+    function langPack() {
+      return i18n[currentLang] || i18n.en;
+    }
+
+    function localizedNode(node) {
+      const translated = langPack().nodes[node.id] || {};
+      return {
+        ...node,
+        title: translated.title || node.title,
+        description: translated.description || node.description,
+        details: translated.details || node.details || []
+      };
+    }
+
+    function localizedEdgeLabel(label) {
+      return langPack().edges?.[label] || label || "";
+    }
+
+    function nodeCodeFor(data, node, index) {
+      const flowCodePrefix = String(data.flowCodePrefix || data.flowPrefix || "FL").toUpperCase();
+      return node.code || `${flowCodePrefix}${String(index + 1).padStart(2, "0")}`;
+    }
+
+    function flowIdFor(entry, index) {
+      return entry.id || entry.flow?.id || entry.flow?.flowCodePrefix || `flow-${index + 1}`;
+    }
+
+    function scopedNodeId(flowId, nodeId) {
+      return `${flowId}::${nodeId}`;
+    }
+
+    function nodesWithRuntimeStatus(data, runtimeState = {}) {
+      const sourceNodes = data.nodes || [];
+      const activeCode = String(runtimeState.activeNodeCode || "").toUpperCase();
+      const activeNodeId = runtimeState.activeNodeId || "";
+      const activeIndex = sourceNodes.findIndex((node, index) => {
+        const code = nodeCodeFor(data, node, index).toUpperCase();
+        return code === activeCode || node.id === activeNodeId;
+      });
+
+      if (activeIndex < 0) {
+        return sourceNodes.map((node) => ({
+          ...node,
+          status: node.status || "pending"
+        }));
+      }
+
+      return sourceNodes.map((node, index) => ({
+        ...node,
+        status: index < activeIndex ? "done" : index === activeIndex ? "active" : "pending"
+      }));
+    }
+
+    function normalizeFlowEntries(data, runtimeState = {}) {
+      if (data?.flows?.length) {
+        return data.flows.map((entry, index) => ({
+          id: flowIdFor(entry, index),
+          flow: entry.flow || entry,
+          runtimeState: entry.runtimeState || runtimeState || {}
+        }));
+      }
+      return [{
+        id: flowIdFor({ flow: data }, 0),
+        flow: data,
+        runtimeState
+      }];
+    }
+
+    function setSyncState(date = lastSyncTime, errorMessage = "") {
+      const syncState = document.getElementById("sync-state");
+      if (!syncState) return;
+      if (errorMessage) {
+        syncState.textContent = `${langPack().syncError}: ${errorMessage}`;
+        return;
+      }
+      syncState.textContent = date ? `${langPack().syncPrefix} ${date.toLocaleTimeString()}` : "Polling";
+    }
+
+    function applyLanguage() {
+      document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+      languageCurrent.textContent = currentLang === "zh" ? "中文" : "English";
+      document.getElementById("language-label").textContent = langPack().languageLabel;
+      nodeModeNormal.textContent = langPack().nodeModes.normal;
+      nodeModeSimple.textContent = langPack().nodeModes.simple;
+      nodeModeButton.setAttribute("aria-label", langPack().nodeModeLabel);
+      document.getElementById("node-colors-title").textContent = langPack().nodeColors;
+      document.getElementById("status-title").textContent = langPack().status;
+      document.getElementById("done-label").textContent = langPack().statusLabels.done;
+      document.getElementById("active-label").textContent = langPack().statusLabels.active;
+      document.getElementById("pending-label").textContent = langPack().statusLabels.pending;
+      setSyncState();
+      document.querySelectorAll(".language-option").forEach((option) => {
+        const active = option.dataset.lang === currentLang;
+        option.classList.toggle("active", active);
+        option.setAttribute("aria-selected", String(active));
+      });
+      if (lastData) render(lastData, lastRuntimeState);
+    }
+
+    function setLanguageMenuOpen(open) {
+      languageMenu.classList.toggle("open", open);
+      languageTrigger.setAttribute("aria-expanded", String(open));
+    }
+
+    function applyNodeMode() {
+      const simple = nodeMode === "simple";
+      nodeModeToggle.classList.toggle("simple", simple);
+      nodeModeToggle.classList.toggle("normal", !simple);
+      nodeModeButton.setAttribute("aria-pressed", String(simple));
+      nodeModeButton.setAttribute("aria-label", langPack().nodeModeLabel);
+      if (lastData) render(lastData, lastRuntimeState);
+    }
+
+    function layoutFlows(flowEntries) {
+      const positions = {};
+      const width = nodeMode === "simple" ? 340 : 280;
+      const height = nodeMode === "simple" ? 52 : 126;
+      const gapY = nodeMode === "simple" ? 38 : 42;
+      const gapX = nodeMode === "simple" ? 112 : 150;
+      const titleGap = 48;
+      let x = 0;
+      const flows = flowEntries.map((entry, flowIndex) => {
+        const flowId = flowIdFor(entry, flowIndex);
+        const flow = entry.flow;
+        const nodes = nodesWithRuntimeStatus(flow, entry.runtimeState);
+        const flowWidth = width;
+        nodes.forEach((node, nodeIndex) => {
+          positions[scopedNodeId(flowId, node.id)] = {
+            x,
+            y: titleGap + nodeIndex * (height + gapY),
+            width,
+            height
+          };
+        });
+        const flowLayout = {
+          id: flowId,
+          flow,
+          nodes,
+          edges: flow.edges || [],
+          x,
+          y: 0,
+          width: flowWidth,
+          titleGap
+        };
+        x += flowWidth + gapX;
+        return flowLayout;
+      });
+      return { positions, flows };
+    }
+
+    function graphBounds(positions, flows = []) {
+      const values = Object.values(positions);
+      if (!values.length) return { width: 280, height: 126 };
+      const maxX = Math.max(...values.map((p) => p.x + p.width), 280);
+      const maxY = Math.max(...values.map((p) => p.y + p.height), ...flows.map((flow) => flow.y + 28), 126);
+      return { width: maxX, height: maxY };
+    }
+
+    function fitGraph(bounds) {
+      const rect = svg.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const fitScale = clamp(Math.min((rect.width - 72) / (bounds.width + loopEdgeOffset), (rect.height - 72) / bounds.height), minScale, 1.15);
+      transform.scale = fitScale;
+      transform.x = Math.max(36 + loopEdgeOffset * fitScale, (rect.width - bounds.width * fitScale) / 2);
+      transform.y = 36;
+      applyTransform();
+    }
+
+    function syncGridPattern() {
+      const pattern = document.getElementById("world-grid-pattern");
+      const path = document.getElementById("world-grid-path");
+      if (!pattern || !path) return;
+      const spacing = Math.max(6, gridSize * transform.scale);
+      const offsetX = ((transform.x % spacing) + spacing) % spacing;
+      const offsetY = ((transform.y % spacing) + spacing) % spacing;
+      pattern.setAttribute("width", spacing);
+      pattern.setAttribute("height", spacing);
+      pattern.setAttribute("patternTransform", `translate(${offsetX} ${offsetY})`);
+      path.setAttribute("d", `M ${spacing} 0 L 0 0 0 ${spacing}`);
+    }
+
+    function applyTransform() {
+      if (viewportLayer) {
+        viewportLayer.setAttribute("transform", `translate(${transform.x} ${transform.y}) scale(${transform.scale})`);
+      }
+      syncGridPattern();
+    }
+
+    function zoomAt(clientX, clientY, factor) {
+      const rect = svg.getBoundingClientRect();
+      const sx = clientX - rect.left;
+      const sy = clientY - rect.top;
+      const beforeX = (sx - transform.x) / transform.scale;
+      const beforeY = (sy - transform.y) / transform.scale;
+      const nextScale = clamp(transform.scale * factor, minScale, maxScale);
+      transform.x = sx - beforeX * nextScale;
+      transform.y = sy - beforeY * nextScale;
+      transform.scale = nextScale;
+      applyTransform();
+    }
+
+    function edgeGeometry(from, to) {
+      if (to.y < from.y) {
+        const x1 = from.x;
+        const y1 = from.y + from.height / 2;
+        const x2 = to.x;
+        const y2 = to.y + to.height / 2;
+        const loopX = from.x - loopEdgeOffset;
+        const midY = y1 + (y2 - y1) / 2;
+        return {
+          d: `M ${x1} ${y1} C ${loopX} ${y1}, ${loopX} ${y2}, ${x2} ${y2}`,
+          labelX: loopX - 8,
+          labelY: midY + 4,
+          anchor: "end"
+        };
+      }
+      const x1 = from.x + from.width / 2;
+      const y1 = from.y + from.height;
+      const x2 = to.x + to.width / 2;
+      const y2 = to.y;
+      const midY = y1 + (y2 - y1) / 2;
+      return {
+        d: `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`,
+        labelX: from.x + from.width / 2 + 72,
+        labelY: (from.y + from.height + to.y) / 2 + 4,
+        anchor: "start"
+      };
+    }
+
+    function render(data, runtimeState = lastRuntimeState) {
+      const flowEntries = normalizeFlowEntries(data, runtimeState);
+      const { positions, flows } = layoutFlows(flowEntries);
+      const bounds = graphBounds(positions, flows);
+      const defs = `
+        <defs>
+          <pattern id="world-grid-pattern" width="${gridSize}" height="${gridSize}" patternUnits="userSpaceOnUse">
+            <path id="world-grid-path" class="world-grid-line" d="M ${gridSize} 0 L 0 0 0 ${gridSize}"></path>
+          </pattern>
+          <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="var(--line)"></path>
+          </marker>
+        </defs>
+      `;
+      const flowMarkup = flows.map((flowLayout) => {
+        const flowTitle = flowLayout.flow.title || flowLayout.id;
+        const flowPrefix = String(flowLayout.flow.flowCodePrefix || flowLayout.flow.flowPrefix || "").toUpperCase();
+        const titleMarkup = `
+          <g transform="translate(${flowLayout.x}, ${flowLayout.y})">
+            <text class="flow-label" x="${flowLayout.width / 2}" y="17" text-anchor="middle">${escapeHtml(flowTitle)}</text>
+            <text class="flow-caption" x="${flowLayout.width / 2}" y="33" text-anchor="middle">${escapeHtml(flowPrefix ? `${flowPrefix} route` : "route")}</text>
+          </g>
+        `;
+        const edgeMarkup = flowLayout.edges.map((edge) => {
+          const from = positions[scopedNodeId(flowLayout.id, edge.from)];
+          const to = positions[scopedNodeId(flowLayout.id, edge.to)];
+          if (!from || !to) return "";
+          const geometry = edgeGeometry(from, to);
+          return `
+            <path class="edge" d="${geometry.d}" marker-end="url(#arrow)"></path>
+            <text class="edge-label" x="${geometry.labelX}" y="${geometry.labelY}" text-anchor="${geometry.anchor}">${escapeHtml(localizedEdgeLabel(edge.label))}</text>
+          `;
+        }).join("");
+        const nodeMarkup = flowLayout.nodes.map((node, index) => {
+          const viewNode = localizedNode(node);
+          const p = positions[scopedNodeId(flowLayout.id, node.id)];
+          const color = typeColors[node.type] || "var(--pending)";
+          const lines = wrapText(viewNode.description, currentLang === "zh" ? 18 : 38);
+          const detail = (viewNode.details || [])[0] || node.type || "";
+          const statusText = langPack().statusLabels[node.status] || node.status || langPack().statusLabels.pending;
+          const isSimple = nodeMode === "simple";
+          const codeText = nodeCodeFor(flowLayout.flow, node, index);
+          const codeX = isSimple ? 44 : 34;
+          const titleX = isSimple ? 82 : 68;
+          const titleText = isSimple ? truncateText(viewNode.title, currentLang === "zh" ? 20 : 28) : viewNode.title;
+          const rectRadius = isSimple ? p.height / 2 : 8;
+          return `
+            <g class="node node-${escapeHtml(nodeMode)} ${escapeHtml(node.status || "pending")}" transform="translate(${p.x}, ${p.y})">
+              <rect width="${p.width}" height="${p.height}" rx="${rectRadius}"></rect>
+              <circle cx="${isSimple ? 24 : 18}" cy="${isSimple ? 26 : 20}" r="${isSimple ? 8 : 7}" fill="${color}" stroke="var(--border)" stroke-width="1"></circle>
+              <text class="node-code" x="${codeX}" y="${isSimple ? 31 : 25}">${escapeHtml(codeText)}</text>
+              <text class="node-title" x="${titleX}" y="${isSimple ? 31 : 25}">${escapeHtml(titleText)}</text>
+              <text class="node-status" x="${p.width - (isSimple ? 20 : 14)}" y="${isSimple ? 31 : 24}" text-anchor="end">${escapeHtml(statusText)}</text>
+              ${isSimple ? "" : lines.map((line, idx) => `<text class="node-desc" x="18" y="${52 + idx * 16}">${escapeHtml(line)}</text>`).join("")}
+              ${isSimple ? "" : `<text class="node-chip" x="18" y="${p.height - 15}">${escapeHtml(detail.slice(0, 32))}</text>`}
+            </g>
+          `;
+        }).join("");
+        return `${titleMarkup}${edgeMarkup}${nodeMarkup}`;
+      }).join("");
+      svg.innerHTML = `${defs}<rect class="world-grid-fill" width="100%" height="100%" fill="url(#world-grid-pattern)"></rect><g class="viewport-layer" id="viewport-layer">${flowMarkup}</g>`;
+      viewportLayer = document.getElementById("viewport-layer");
+      updateSidePanel({ nodes: flows.flatMap((flow) => flow.nodes) });
+      const layoutSignature = [
+        currentLang,
+        nodeMode,
+        flows.map((flow) => `${flow.id}:${flow.flow.flowCodePrefix || flow.flow.flowPrefix || "FL"}:${flow.nodes.map((node) => node.id).join("|")}:${flow.edges.map((edge) => `${edge.from}>${edge.to}:${edge.label}`).join("|")}`).join("::")
+      ].join("::");
+      const shouldFit = !hasInitialFit || layoutSignature !== lastLayoutSignature;
+      lastLayoutSignature = layoutSignature;
+      if (shouldFit) {
+        hasInitialFit = true;
+        requestAnimationFrame(() => fitGraph(bounds));
+      } else {
+        applyTransform();
+      }
+    }
+
+    function updateSidePanel(data) {
+      const nodes = data.nodes || [];
+      document.getElementById("done-count").textContent = nodes.filter((n) => n.status === "done").length;
+      document.getElementById("active-count").textContent = nodes.filter((n) => n.status === "active").length;
+      document.getElementById("pending-count").textContent = nodes.filter((n) => !n.status || n.status === "pending").length;
+      const types = Object.keys(langPack().typeLabels);
+      document.getElementById("legend").innerHTML = types.map((type) => `
+        <div class="legend-row"><span class="dot" style="background:${typeColors[type] || "var(--pending)"}"></span>${escapeHtml(langPack().typeLabels[type])}</div>
+      `).join("");
+    }
+
+    svg.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse" && event.button !== 1) return;
+      event.preventDefault();
+      isPanning = true;
+      panStart = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        tx: transform.x,
+        ty: transform.y
+      };
+      canvasWrap.classList.add("dragging");
+      svg.setPointerCapture(event.pointerId);
+    });
+
+    svg.addEventListener("pointermove", (event) => {
+      if (!isPanning || !panStart || event.pointerId !== panStart.pointerId) return;
+      event.preventDefault();
+      transform.x = panStart.tx + event.clientX - panStart.x;
+      transform.y = panStart.ty + event.clientY - panStart.y;
+      applyTransform();
+    });
+
+    function endPan(event) {
+      if (panStart && event.pointerId === panStart.pointerId) {
+        isPanning = false;
+        panStart = null;
+        canvasWrap.classList.remove("dragging");
+      }
+    }
+
+    svg.addEventListener("pointerup", endPan);
+    svg.addEventListener("pointercancel", endPan);
+    svg.addEventListener("auxclick", (event) => event.preventDefault());
+
+    svg.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      // macOS trackpad pinch is delivered as a ctrlKey wheel event in Chromium.
+      if (event.metaKey || event.ctrlKey) {
+        const sensitivity = 0.01;
+        const factor = Math.exp(-event.deltaY * sensitivity);
+        zoomAt(event.clientX, event.clientY, factor);
+        return;
+      }
+      transform.x -= event.deltaX;
+      transform.y -= event.deltaY;
+      applyTransform();
+    }, { passive: false });
+
+    svg.addEventListener("touchstart", (event) => {
+      if (event.touches.length === 1) {
+        touchStart = {
+          mode: "pan",
+          x: event.touches[0].clientX,
+          y: event.touches[0].clientY,
+          tx: transform.x,
+          ty: transform.y
+        };
+      } else if (event.touches.length === 2) {
+        const a = event.touches[0];
+        const b = event.touches[1];
+        const dx = b.clientX - a.clientX;
+        const dy = b.clientY - a.clientY;
+        touchStart = {
+          mode: "pinch",
+          distance: Math.hypot(dx, dy),
+          centerX: (a.clientX + b.clientX) / 2,
+          centerY: (a.clientY + b.clientY) / 2,
+          scale: transform.scale
+        };
+      }
+    }, { passive: false });
+
+    svg.addEventListener("touchmove", (event) => {
+      if (!touchStart) return;
+      event.preventDefault();
+      if (touchStart.mode === "pan" && event.touches.length === 1) {
+        transform.x = touchStart.tx + event.touches[0].clientX - touchStart.x;
+        transform.y = touchStart.ty + event.touches[0].clientY - touchStart.y;
+        applyTransform();
+      } else if (touchStart.mode === "pinch" && event.touches.length === 2) {
+        const a = event.touches[0];
+        const b = event.touches[1];
+        const dx = b.clientX - a.clientX;
+        const dy = b.clientY - a.clientY;
+        const distance = Math.hypot(dx, dy);
+        const factor = distance / Math.max(1, touchStart.distance);
+        const nextScale = clamp(touchStart.scale * Math.pow(factor, 1.3), minScale, maxScale);
+        zoomAt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, nextScale / transform.scale);
+      }
+    }, { passive: false });
+
+    svg.addEventListener("touchend", () => {
+      touchStart = null;
+    });
+
+    window.addEventListener("resize", () => {
+      if (!hasInitialFit) return;
+      applyTransform();
+    });
+
+    languageTrigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setLanguageMenuOpen(!languageMenu.classList.contains("open"));
+    });
+
+    nodeModeButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setLanguageMenuOpen(false);
+      nodeMode = nodeMode === "simple" ? "normal" : "simple";
+      localStorage.setItem("skill-flow-node-mode", nodeMode);
+      applyNodeMode();
+    });
+
+    document.querySelectorAll(".language-option").forEach((option) => {
+      option.addEventListener("click", (event) => {
+        event.stopPropagation();
+        currentLang = option.dataset.lang;
+        localStorage.setItem("skill-flow-language", currentLang);
+        applyLanguage();
+        setLanguageMenuOpen(false);
+      });
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!languageMenu.contains(event.target)) {
+        setLanguageMenuOpen(false);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setLanguageMenuOpen(false);
+      }
+    });
+
+    languageMenu.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    languageMenu.addEventListener("wheel", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    languageMenu.addEventListener("touchstart", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    languageMenu.addEventListener("touchmove", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    nodeModeToggle.addEventListener("pointerdown", (event) => {
+      event.stopPropagation();
+    });
+
+    nodeModeToggle.addEventListener("wheel", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    nodeModeToggle.addEventListener("touchstart", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    nodeModeToggle.addEventListener("touchmove", (event) => {
+      event.stopPropagation();
+    }, { passive: false });
+
+    async function loadFlowBundle(timestamp) {
+      const manifestResponse = await fetch(`flows.json?ts=${timestamp}`);
+      if (!manifestResponse.ok) {
+        const [flowResponse, runtimeResponse] = await Promise.all([
+          fetch(`flow.json?ts=${timestamp}`),
+          fetch(`runtime-state.json?ts=${timestamp}`)
+        ]);
+        const flowText = await flowResponse.text();
+        const runtimeText = runtimeResponse.ok ? await runtimeResponse.text() : "{}";
+        return {
+          flowText,
+          runtimeText,
+          data: JSON.parse(flowText),
+          runtimeState: runtimeText.trim() ? JSON.parse(runtimeText) : {}
+        };
+      }
+
+      const manifestText = await manifestResponse.text();
+      const manifest = JSON.parse(manifestText);
+      const runtimeResponse = await fetch(`${manifest.runtimePath || "runtime-state.json"}?ts=${timestamp}`);
+      const runtimeText = runtimeResponse.ok ? await runtimeResponse.text() : "{}";
+      const runtimeState = runtimeText.trim() ? JSON.parse(runtimeText) : {};
+      const flows = await Promise.all((manifest.flows || []).map(async (entry, index) => {
+        const flowResponse = await fetch(`${entry.flowPath}?ts=${timestamp}`);
+        const flowText = await flowResponse.text();
+        return {
+          id: entry.id || `flow-${index + 1}`,
+          flowText,
+          flow: JSON.parse(flowText)
+        };
+      }));
+
+      return {
+        flowText: `${manifestText}\n${flows.map((flow) => flow.flowText).join("\n")}`,
+        runtimeText,
+        data: {
+          flows: flows.map((flow) => ({
+            id: flow.id,
+            flow: flow.flow
+          }))
+        },
+        runtimeState
+      };
+    }
+
+    async function poll() {
+      try {
+        const timestamp = Date.now();
+        const bundle = await loadFlowBundle(timestamp);
+        const combinedHash = `${bundle.flowText}\n---runtime---\n${bundle.runtimeText}`;
+        if (combinedHash !== lastHash) {
+          lastHash = combinedHash;
+          lastData = bundle.data;
+          lastRuntimeState = bundle.runtimeState;
+          render(lastData, lastRuntimeState);
+          lastSyncTime = new Date();
+          setSyncState(lastSyncTime);
+        }
+      } catch (error) {
+        setSyncState(lastSyncTime, error.message);
+      }
+    }
+
+    applyLanguage();
+    applyNodeMode();
+    poll();
+    setInterval(poll, 1000);
+  </script>
+</body>
+</html>
